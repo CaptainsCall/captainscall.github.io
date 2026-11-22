@@ -135,7 +135,7 @@ function after(g){
  else if(S.guesses.length===maxBalls()){var bonus=2+cost(S.fields)+(has("body")?3:0);S.pts[bowler()]+=bonus;S.last=S.names[bowler()]+" takes the wicket"+(S.mode==="practice"?".":" and "+bonus+" runs.");S.wicket=1;S.phase="result"}
  render()}
 function triesHtml(){
-  var h='<p class="mute" style="text-align:center;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.08em"><b>'+esc(S.names[batter()])+'’s tries</b></p>';
+  var h='<p class="mute" style="text-align:center;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.08em"><b>'+S.names[batter()]+'’s tries</b></p>';
   if(!S.guesses.length)return h+'<p class="mute" style="text-align:center">No balls faced.</p>';
   S.guesses.forEach(function(g){
    var lost=g.r[0]==="e",r=lost?g.r:score(g.w,S.word);
@@ -349,7 +349,7 @@ online.join=function(code){
   if(tok!==online.tok)return;
   online.fail("Could not reach the online server"+why(e)+". Check your internet connection, then try again.")})};
 online.startRound=function(){
- S.guesses=[];S.last="";S.wicket=0;S.gaveUp=0;S.word="";S.fields=[];S.hint="";S.busy=false;
+ S.guesses=[];S.last="";S.wicket=0;S.gaveUp=0;S.word="";S.fields=[];S.hint="";S.busy=false;S.wantGive=false;
  S.phase=bowler()===S.me?"setup":"wait";render();online.drain()};
 online.drain=function(){var q=online.inbox;online.inbox=[];q.forEach(online.handle)};
 online.next=function(){S.round++;if(S.round<ROUNDS)online.startRound();else{S.phase="final";render();online.drain()}};
@@ -359,13 +359,13 @@ online.call=function(){
  S.hint="";S.phase="watch";render()};
 online.guess=function(g){S.busy=true;clearInterval(T);var e=document.getElementById("err");if(e)e.textContent="Waiting for the bowler…";online.send({t:"guess",g:g})};
 online.timeout=function(){if(S.busy)return;S.busy=true;online.send({t:"timeout"})};
-online.giveup=function(){if(S.busy)return;S.busy=true;clearInterval(T);online.send({t:"giveup"})};
+online.giveup=function(){if(S.busy){S.wantGive=true;var e=document.getElementById("err");if(e)e.textContent="Waiting for the last ball. Your give-up will go through next.";return}S.busy=true;clearInterval(T);online.send({t:"giveup"})};
 online.finish=function(kind,n){
  S.wicket=kind==="solved"?0:1;S.gaveUp=kind==="giveup"?1:0;
  if(kind==="solved")S.last=S.names[batter()]+" scores "+n+" runs.";
  else if(kind==="giveup")S.last=S.names[batter()]+" gives up. "+S.names[bowler()]+" takes the wicket and "+n+" runs.";
  else S.last=S.names[bowler()]+" takes the wicket and "+n+" runs.";
- S.busy=false;S.phase="result";render()};
+ S.wantGive=false;S.busy=false;S.phase="result";render()};
 online.resolve=function(w,r,kind){
  if(w)S.guesses.push({w:w,r:r});
  var n=0;
@@ -409,7 +409,7 @@ online.handle=function(m){
   return}
  if(m.t==="res"){
   if(S.phase!=="play"||batter()!==S.me)return;
-  if(m.w!==null){
+  if(m.w!=null){
    var okr=Array.isArray(m.r)&&m.r.length===5&&m.r.every(function(c){return "gyxqe".indexOf(c)>-1});
    if(typeof m.w!=="string"||!(m.w==="-----"||/^[a-z]{5}$/.test(m.w))||!okr)return;
    S.guesses.push({w:m.w,r:m.r});
@@ -419,7 +419,7 @@ online.handle=function(m){
    if(typeof m.word!=="string"||!/^[a-z]{5}$/.test(m.word))return;
    if(Array.isArray(m.pts)&&m.pts.length===2&&m.pts.every(function(x){return typeof x==="number"&&isFinite(x)}))S.pts=[m.pts[0],m.pts[1]];
    S.word=m.word;online.finish(m.k,Math.max(0,Math.min(99,m.amt|0)))}
-  else render();
+  else{render();if(S.wantGive){S.wantGive=false;online.giveup()}}
   return}
 };
 function bind(){
