@@ -95,7 +95,7 @@ var F={
  body:{g:"Strategy",n:"Bodyline",c:2,d:"High risk. If the batter fails, you gain 3 extra runs. If they solve it in 3 balls or fewer, they gain 2 extra runs."}
 };
 var ROUNDS=4;
-var S={names:["Player A","Player B"],pts:[0,0],round:0,phase:"menu",mode:"",solved:0,tot:0,word:"",fields:[],guesses:[],last:"",wicket:0,hint:"",me:0,epoch:0,busy:false,myName:"",joinCode:"",err:"",hintP:0};
+var S={names:["Player A","Player B"],pts:[0,0],round:0,phase:"menu",mode:"",fromLink:false,solved:0,tot:0,word:"",fields:[],guesses:[],last:"",wicket:0,hint:"",me:0,epoch:0,busy:false,myName:"",joinCode:"",err:"",hintP:0};
 var app=document.getElementById("app");
 function bowler(){return S.mode==="practice"?1:S.round%2}
 function batter(){return S.mode==="practice"?0:1-S.round%2}
@@ -172,7 +172,7 @@ function compSetup(){
 function boardHtml(){
  var sub,sc;
  if(S.mode==="practice"&&S.phase!=="names"){sub="Batting Practice &middot; Net session";sc=S.names[0]+' <b>'+S.pts[0]+'</b><br>Solved <b>'+S.solved+'</b>/'+S.tot}
- else if((S.mode==="match"||S.mode==="online")&&S.phase!=="names"&&["lobby","connecting","hosting","gone"].indexOf(S.phase)<0){var yo=S.mode==="online";sub=(yo?"Online Test Match":"Test Match")+" &middot; Innings "+Math.min(S.round+1,ROUNDS)+" of "+ROUNDS;sc=S.names[0]+(yo&&S.me===0?" (you)":"")+' <b>'+S.pts[0]+'</b><br>'+S.names[1]+(yo&&S.me===1?" (you)":"")+' <b>'+S.pts[1]+'</b>'}
+ else if((S.mode==="match"||S.mode==="online")&&S.phase!=="names"&&["oname","olobby","ojoin","connecting","hosting","gone"].indexOf(S.phase)<0){var yo=S.mode==="online";sub=(yo?"Online Test Match":"Test Match")+" &middot; Innings "+Math.min(S.round+1,ROUNDS)+" of "+ROUNDS;sc=S.names[0]+(yo&&S.me===0?" (you)":"")+' <b>'+S.pts[0]+'</b><br>'+S.names[1]+(yo&&S.me===1?" (you)":"")+' <b>'+S.pts[1]+'</b>'}
  else{sub="";sc=""}
  return '<div class="board"><div><h1>Captain’s Call</h1><div class="mute">'+sub+'</div></div><div class="score">'+sc+'</div></div>'}
 function validWord(w){return /^[a-z]{5}$/.test(w)&&(!DICT_OK||WORDS.has(w))}
@@ -181,8 +181,12 @@ var T=null;function render(){clearInterval(T);
  var h=header();
  if(S.phase==="menu"){
   h+='<div class="card"><h2>Choose your game</h2><button id="pm">Batting practice</button><p class="mute">Solo nets session. The computer picks a secret word and its own Captain’s Call. Play as many words as you like and build your runs.</p><button id="mm" class="alt">Play a match</button><p class="mute">Two players on this device take turns bowling and batting over four innings.</p><button id="om" class="alt">Play online</button><p class="mute">Play a friend on their own phone. One of you creates a room and shares the code.</p></div>';
- } else if(S.phase==="lobby"){
-  h+='<div class="card"><h2>Play online</h2><p class="mute">Each player uses their own phone. Your secret word stays on your phone.</p>'+(!configured()?'<div class="warn">Online play is not set up yet.</div>':'')+'<input id="on" type="text" class="nm" maxlength="14" autocomplete="off" placeholder="Your name" value="'+esc(S.myName)+'"><button id="mk">Create a room</button><p class="mute" style="text-align:center;margin-top:16px">or join a friend’s room</p><input id="cd" type="text" maxlength="5" autocomplete="off" autocapitalize="characters" placeholder="CODE" value="'+esc(S.joinCode)+'"><button id="jn" class="alt">Join room</button><div class="err">'+esc(S.err)+'</div><button id="bk" class="alt">Back</button></div>';
+ } else if(S.phase==="oname"){
+  h+='<div class="card"><h2>Play online</h2><p class="mute">First, what is your name? Your friend will see it during the match.</p><input id="on" type="text" class="nm" maxlength="14" autocomplete="off" placeholder="Your name" value="'+esc(S.myName)+'"><button id="onx">Continue</button><button id="bk" class="alt">Back</button></div>';
+ } else if(S.phase==="olobby"){
+  h+='<div class="card"><h2>Hi, '+(S.myName?esc(S.myName):"there")+'</h2><p class="mute">Start a new room, or join one your friend has already made.</p>'+(!configured()?'<div class="warn">Online play is not set up yet.</div>':'')+'<button id="mk">Create a room</button><button id="jn0">Join a room</button><div class="err">'+esc(S.err)+'</div><button id="cn" class="alt">Change name</button></div>';
+ } else if(S.phase==="ojoin"){
+  h+='<div class="card"><h2>Join a room</h2><p class="mute">Type the 5-character code your friend sees on their screen.</p>'+(!configured()?'<div class="warn">Online play is not set up yet.</div>':'')+'<input id="cd" type="text" maxlength="5" autocomplete="off" autocapitalize="characters" placeholder="CODE" value="'+esc(S.joinCode)+'"><button id="jn">Join room</button><div class="err">'+esc(S.err)+'</div><button id="bl" class="alt">Back</button></div>';
  } else if(S.phase==="connecting"){
   h+='<div class="card"><h2>Connecting…</h2><p class="mute">This usually takes a few seconds.</p><button id="bk" class="alt">Cancel</button></div>';
  } else if(S.phase==="hosting"){
@@ -272,7 +276,7 @@ online.flush=function(){
   if(tok!==online.tok)return;
   online.sending=false;online.offline=true;net();
   online.t.flush=setTimeout(function(){if(tok===online.tok)online.flush()},2000)})};
-online.fail=function(msg){online.clean();S.err=msg;S.mode="online";S.phase="lobby";render()};
+online.fail=function(msg,to){online.clean();S.err=msg;S.mode="online";S.phase=to||"olobby";render()};
 online.reset=function(who){online.clean();S.mode="online";S.me=who;S.round=0;S.epoch=0;S.pts=[0,0];S.err="";S.busy=false;S.phase="connecting";
  online.isHost=(who===0);online.id="c"+Math.random().toString(36).slice(2,10);online.seq=0;online.seen=-1;online.peerId=""};
 online.poll=function(tok){
@@ -338,16 +342,16 @@ online.host=function(){
  attempt()};
 online.join=function(code){
  online.reset(1);var tok=online.tok;S.joinCode=code;render();
- if(!configured()){online.fail("Online play is not set up yet.");return}
+ if(!configured()){online.fail("Online play is not set up yet.","ojoin");return}
  db("rooms/"+code+"/meta").then(function(meta){
   if(tok!==online.tok)return;
-  if(!meta){online.fail("No room found with that code.");return}
+  if(!meta){online.fail("No room found with that code.","ojoin");return}
   online.code=code;online.start(tok);
   online.send({t:"hi",name:S.myName,rd:0,ep:0});
-  online.t.to=setTimeout(function(){if(tok===online.tok&&S.phase==="connecting")online.fail("No reply from that room. Check the code, and ask your friend to keep the room screen open.")},25000)
+  online.t.to=setTimeout(function(){if(tok===online.tok&&S.phase==="connecting")online.fail("No reply from that room. Check the code, and ask your friend to keep the room screen open.","ojoin")},25000)
  },function(e){
   if(tok!==online.tok)return;
-  online.fail("Could not reach the online server"+why(e)+". Check your internet connection, then try again.")})};
+  online.fail("Could not reach the online server"+why(e)+". Check your internet connection, then try again.","ojoin")})};
 online.startRound=function(){
  S.guesses=[];S.last="";S.wicket=0;S.gaveUp=0;S.word="";S.fields=[];S.hint="";S.busy=false;S.wantGive=false;
  S.phase=bowler()===S.me?"setup":"wait";render();online.drain()};
@@ -470,11 +474,16 @@ function bind(){
  if(bk)bk.onclick=function(){online.clean();S.pts=[0,0];S.round=0;S.mode="";S.phase="menu";render()};
  if(fin)fin.onclick=function(){S.phase="final";render()};
  var om=document.getElementById("om"),mk=document.getElementById("mk"),jn=document.getElementById("jn"),cp=document.getElementById("cp"),rm=document.getElementById("rm");
- if(om)om.onclick=function(){S.mode="online";S.phase="lobby";S.err="";render()};
- if(mk){var on=document.getElementById("on"),cd=document.getElementById("cd");
-  mk.onclick=function(){S.myName=on.value.trim().slice(0,14);S.joinCode=cd.value;online.host()};
-  jn.onclick=function(){S.myName=on.value.trim().slice(0,14);var c=cd.value.toUpperCase().replace(/[^A-Z0-9]/g,"");S.joinCode=c;if(c.length!==5){S.err="Enter the 5-character room code.";render();return}online.join(c)};
-  on.focus()}
+ if(om)om.onclick=function(){S.mode="online";S.phase="oname";S.err="";S.fromLink=false;render()};
+ var on=document.getElementById("on"),cd=document.getElementById("cd"),onx=document.getElementById("onx"),jn0=document.getElementById("jn0"),bl=document.getElementById("bl"),cn=document.getElementById("cn");
+ if(on){on.focus();on.onkeydown=function(e){if(e.key==="Enter")onx.click()}}
+ if(onx)onx.onclick=function(){S.myName=on.value.trim().slice(0,14);try{localStorage.setItem("cc_name",S.myName)}catch(e){}S.err="";S.phase=(S.fromLink&&S.joinCode.length===5)?"ojoin":"olobby";render()};
+ if(cn)cn.onclick=function(){S.err="";S.fromLink=false;S.phase="oname";render()};
+ if(mk)mk.onclick=function(){S.err="";online.host()};
+ if(jn0)jn0.onclick=function(){S.err="";S.phase="ojoin";render()};
+ if(bl)bl.onclick=function(){S.err="";S.phase="olobby";render()};
+ if(cd){cd.focus();cd.onkeydown=function(e){if(e.key==="Enter")jn.click()};
+  jn.onclick=function(){var c=cd.value.toUpperCase().replace(/[^A-Z0-9]/g,"");S.joinCode=c;if(c.length!==5){S.err="Enter the 5-character room code.";render();return}online.join(c)}}
  if(cp)cp.onclick=function(){var link=location.origin+location.pathname+"?room="+online.code;
   if(navigator.share){navigator.share({title:"Captain’s Call",text:"Join my cricket word match. Room code "+online.code,url:link}).catch(function(){})}
   else if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(link).then(function(){cp.textContent="Link copied"},function(){cp.textContent=link})}
@@ -485,7 +494,8 @@ function bind(){
   if(S.mode==="practice"){S.names=[esc(n1.value.trim()||"You"),"The computer"];compSetup();render()}
   else{S.names=[esc(n1.value.trim()||"Player A"),esc(n2.value.trim()||"Player B")];S.phase="setup";render()}}}
 }
-try{var qr=(new URLSearchParams(location.search).get("room")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,5);if(qr.length===5){S.mode="online";S.phase="lobby";S.joinCode=qr}}catch(e){}
+try{S.myName=(localStorage.getItem("cc_name")||"").slice(0,14)}catch(e){}
+try{var qr=(new URLSearchParams(location.search).get("room")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,5);if(qr.length===5){S.mode="online";S.phase="oname";S.joinCode=qr;S.fromLink=true}}catch(e){}
 render();
 })();
 </script>
