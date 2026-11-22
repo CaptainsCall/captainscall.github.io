@@ -186,13 +186,15 @@ function triesHtml(){
   record("giveup",S.mode==="practice"?0:bonus);
   S.phase="result";render()}
  function header(){
+ var calls=Object.keys(F).map(function(k){return '<p><b>'+F[k].n+'</b> (cost '+F[k].c+'): '+F[k].d+'</p>'}).join('');
+ var warn=DICT_OK?'':'<div class="warn">The word list is empty or too small, so any five letters are accepted.</div>';
+ if(["setup","play","watch","wait","result"].indexOf(S.phase)>=0)return boardHtml()+'<details class="card"><summary><b>Captain’s Call</b></summary>'+calls+'</details>'+warn;
  return boardHtml()+
  '<details class="card"><summary><b>Rules</b></summary>'+
  '<p>The bowler secretly types a five-letter word. The batter has 6 balls to guess it. Green: right letter, right place. Yellow: right letter, wrong place. Grey: not in the word.</p>'+
  '<p>Batting Practice: the computer picks a random word and its own Captain’s Call. Play as many words as you like and build your runs.</p>'+
  '<p>Online: one player creates a room and shares the 5-character code or invite link. The other joins from their own phone. Each word stays on the bowler’s phone and is never sent to the batter until the ball is over.</p><p>Give up: the batter can give up at any time to see the word. It counts as a wicket, exactly as if the batter had failed to guess the word, so the bowler scores the same runs (including the 3 extra for Bodyline). All the batter’s tries stay visible.</p><p>Batter solves it: 6 runs on ball 1, down to 1 run on ball 6. Batter fails: the bowler scores 2 runs plus 1 for every Captain’s Call point spent. Spend all 3 points and the batter gets a free hint. Roles swap each innings, four innings in total.</p>'+
- Object.keys(F).map(function(k){return '<p><b>'+F[k].n+'</b> (cost '+F[k].c+'): '+F[k].d+'</p>'}).join('')+'</details>'+
- (DICT_OK?'':'<div class="warn">The word list is empty or too small, so any five letters are accepted.</div>')}
+ calls+'</details>'+warn}
 function esc(t){return t.replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 var WL=null;
 function wordList(){if(!WL)WL=COMMON.length>=100?COMMON:DICT_OK?Array.from(WORDS):["cover","bails","slips","sweep","pitch","wides","drive","glide","spell","stump"];return WL}
